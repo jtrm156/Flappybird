@@ -3,8 +3,10 @@ package com.mygdx.game
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputAdapter
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.Circle
 import com.badlogic.gdx.math.Intersector
@@ -43,6 +45,12 @@ class FlappyBird : ApplicationAdapter() {
     var topPipeRect = mutableListOf<Rectangle>()
     var bottomPipeRect = mutableListOf<Rectangle>()
 
+    var score = 0
+    var scoringPipe = 0
+    var bitmapFont: BitmapFont? = null
+    var scoreTextures = mutableListOf<Texture>()
+
+
     override fun create() {
         batch = SpriteBatch()
         //img = Texture("badlogic.jpg")
@@ -54,6 +62,10 @@ class FlappyBird : ApplicationAdapter() {
 
         birdCircle = Circle()
 
+        bitmapFont = BitmapFont()
+        bitmapFont!!.setColor(Color.WHITE)
+        bitmapFont!!.data.scale(size/10)
+
         gap = size*4
 
         backGround = Texture("background-day.png")
@@ -63,6 +75,11 @@ class FlappyBird : ApplicationAdapter() {
         birdsState.add(Texture("bluebird-midflap.png"))
         topPipe = Texture("pipe-green.png")
         bottomPipe = Texture("pipe-green.png")
+
+        for(i in 0..9)
+        {
+            scoreTextures.add(Texture("${i}.png"))
+        }
 
         birdY = (Gdx.graphics.height/2 - size/2)
 
@@ -92,6 +109,27 @@ class FlappyBird : ApplicationAdapter() {
 
         if (gameState != 0)
         {
+            if(pipeX[scoringPipe] < Gdx.graphics.width / 2)
+            {
+                score++
+
+                Gdx.app.log("Score", "${score}")
+
+                if(scoringPipe < numberOfPipes - 1)
+                {
+                    scoringPipe++
+                }
+                else
+                {
+                    scoringPipe = 0
+                }
+            }
+            if(Gdx.input.justTouched() || Gdx.input.isTouched)
+            {
+                velocity = (-gap*0.07).toFloat()
+                Gdx.app.log("moving", "!!")
+            }
+
             for (i in 0 until numberOfPipes)
             {
                 if(pipeX[i] < -size*2)
@@ -147,11 +185,11 @@ class FlappyBird : ApplicationAdapter() {
 //                        bottomPipeRect[i].height
 //                )
             }
-
             if(birdY > 0 || velocity < 0)
             {
                 velocity += gravity
                 birdY -= velocity
+                Gdx.app.log("birdY", "changing")
             }
 
             when(flapState)
@@ -167,22 +205,50 @@ class FlappyBird : ApplicationAdapter() {
             if(Gdx.input.justTouched())
             {
                 gameState = 1
-
-                if(Gdx.input.justTouched() || Gdx.input.isTouched)
-                {
-                    velocity = (-gap*0.07).toFloat()
-                }
+                Gdx.app.log("start", "!!")
             }
         }
-
+        
         // Bird
         batch!!.draw(
             birdsState[flapState],
             (Gdx.graphics.width/2 - size/2),
-            (Gdx.graphics.height/2 - size/2),
+            birdY,
             size,
             size)
+        Gdx.app.log("draw check", "!!")
         batch!!.end()
+
+        val scoreDigits = mutableListOf<Int>()
+        var _score = score
+        if (_score == 0)
+        {
+            batch!!.draw(
+                scoreTextures[0],
+                size,
+                Gdx.graphics.height - size*2,
+                size,
+                size)
+        }
+        else
+        {
+            while (_score > 0)
+            {
+                scoreDigits.add(_score % 10)
+                _score /= 10
+            }
+            scoreDigits.reverse()
+            Gdx.app.log("scoreDigits", "$scoreDigits")
+            for (i in 0 until scoreDigits.count())
+            {
+                batch!!.draw(
+                    scoreTextures[scoreDigits[i]],
+                    size*(i+1),
+                    Gdx.graphics.height - size*2,
+                    size,
+                    size)
+            }
+        }
 
         birdCircle!!.set(
             (Gdx.graphics.width/2f),
