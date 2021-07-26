@@ -49,7 +49,8 @@ class FlappyBird : ApplicationAdapter() {
     var scoringPipe = 0
     var bitmapFont: BitmapFont? = null
     var scoreTextures = mutableListOf<Texture>()
-
+    var maindisplay: Texture?= null
+    var gameOver: Texture? = null
 
     override fun create() {
         batch = SpriteBatch()
@@ -66,15 +67,17 @@ class FlappyBird : ApplicationAdapter() {
         bitmapFont!!.setColor(Color.WHITE)
         bitmapFont!!.data.scale(size/10)
 
-        gap = size*4
+        gap = size*6
 
         backGround = Texture("background-day.png")
         birdsState.add(Texture("bluebird-downflap.png"))
         birdsState.add(Texture("bluebird-midflap.png"))
         birdsState.add(Texture("bluebird-upflap.png"))
         birdsState.add(Texture("bluebird-midflap.png"))
-        topPipe = Texture("pipe-green.png")
-        bottomPipe = Texture("pipe-green.png")
+        topPipe = Texture("toppipe.png")
+        bottomPipe = Texture("bottompipe.png")
+        maindisplay = Texture("message.png")
+        gameOver = Texture("gameover.png")
 
         for(i in 0..9)
         {
@@ -97,18 +100,43 @@ class FlappyBird : ApplicationAdapter() {
             topPipeRect.add(Rectangle())
             bottomPipeRect.add(Rectangle())
         }
+
+        startGame()
+    }
+
+    private fun startGame()
+    {
+        velocity = 0f
+        score = 0
+        scoringPipe = 0
+
+        birdY = (Gdx.graphics.height/2 - size/2)
+        for (i in 0 until numberOfPipes)
+        {
+            pipeX[i] = (Gdx.graphics.width + i* distHorBwPipes).toFloat()
+            distVertBwPipes[i] = (randomGenerator!!.nextFloat() - 0.5f) * maxPipeOffset
+        }
     }
 
     override fun render() {
         batch!!.begin()
         // Background
-        batch!!.draw(
-            backGround,0f, 0f,
-            Gdx.graphics.width.toFloat(),
-            Gdx.graphics.height.toFloat())
 
-        if (gameState != 0)
+        if (gameState == 1)
         {
+            batch!!.draw(
+                backGround,0f, 0f,
+                Gdx.graphics.width.toFloat(),
+                Gdx.graphics.height.toFloat())
+            // Bird
+            batch!!.draw(
+                birdsState[flapState],
+                (Gdx.graphics.width/2 - size/2),
+                birdY,
+                size,
+                size)
+            Gdx.app.log("draw check", "!!")
+
             if(pipeX[scoringPipe] < Gdx.graphics.width / 2)
             {
                 score++
@@ -126,7 +154,7 @@ class FlappyBird : ApplicationAdapter() {
             }
             if(Gdx.input.justTouched() || Gdx.input.isTouched)
             {
-                velocity = (-gap*0.07).toFloat()
+                velocity = (-gap*0.046).toFloat()
                 Gdx.app.log("moving", "!!")
             }
 
@@ -199,54 +227,66 @@ class FlappyBird : ApplicationAdapter() {
                 2 -> flapState = 3
                 3 -> flapState = 0
             }
+            val scoreDigits = mutableListOf<Int>()
+            var _score = score
+            if (_score == 0)
+            {
+                batch!!.draw(
+                    scoreTextures[0],
+                    size,
+                    Gdx.graphics.height - size*2,
+                    size,
+                    size)
+            }
+            else
+            {
+                while (_score > 0)
+                {
+                    scoreDigits.add(_score % 10)
+                    _score /= 10
+                }
+                scoreDigits.reverse()
+                Gdx.app.log("scoreDigits", "$scoreDigits")
+                for (i in 0 until scoreDigits.count())
+                {
+                    batch!!.draw(
+                        scoreTextures[scoreDigits[i]],
+                        size*(i+1),
+                        Gdx.graphics.height - size*2,
+                        size,
+                        size)
+                }
+            }
         }
-        else
+        else if(gameState == 0)
         {
+            batch!!.draw(
+                maindisplay,
+                size,
+                size,
+                Gdx.graphics.width*0.8.toFloat(),
+                Gdx.graphics.height*0.8.toFloat())
+
             if(Gdx.input.justTouched())
             {
                 gameState = 1
                 Gdx.app.log("start", "!!")
             }
         }
-        
-        // Bird
-        batch!!.draw(
-            birdsState[flapState],
-            (Gdx.graphics.width/2 - size/2),
-            birdY,
-            size,
-            size)
-        Gdx.app.log("draw check", "!!")
-        batch!!.end()
-
-        val scoreDigits = mutableListOf<Int>()
-        var _score = score
-        if (_score == 0)
+        else if(gameState == 2)
         {
             batch!!.draw(
-                scoreTextures[0],
-                size,
-                Gdx.graphics.height - size*2,
-                size,
+                gameOver,
+                Gdx.graphics.width / 2 - size*3,
+                Gdx.graphics.height /2 - size/2,
+                size*6,
                 size)
-        }
-        else
-        {
-            while (_score > 0)
+
+            if(Gdx.input.justTouched())
             {
-                scoreDigits.add(_score % 10)
-                _score /= 10
-            }
-            scoreDigits.reverse()
-            Gdx.app.log("scoreDigits", "$scoreDigits")
-            for (i in 0 until scoreDigits.count())
-            {
-                batch!!.draw(
-                    scoreTextures[scoreDigits[i]],
-                    size*(i+1),
-                    Gdx.graphics.height - size*2,
-                    size,
-                    size)
+                startGame()
+                Gdx.app.log("restart", "!!")
+                gameState = 1
             }
         }
 
@@ -261,12 +301,14 @@ class FlappyBird : ApplicationAdapter() {
                 Intersector.overlaps(birdCircle, bottomPipeRect[i]))
             {
                 Gdx.app.log("Collision", "Detected!")
+                gameState = 2
             }
         }
+        batch!!.end()
     }
 
-    override fun dispose() {
-        batch!!.dispose()
-        img!!.dispose()
-    }
+    //override fun dispose() {
+        //batch!!.dispose()
+        //img!!.dispose()
+    //}
 }
